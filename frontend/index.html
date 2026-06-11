@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DETECTAI | Advanced AI Job Fraud Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="particles-js"></div>
+    <div class="cyber-grid"></div>
+
+    <!-- Login Screen Portal -->
+    <div id="login-container" class="login-container">
+        <div class="login-box glass-panel">
+            <div class="login-header">
+                <div class="logo">
+                    <span class="logo-icon">🛡️</span>
+                    <h1>DETECT<span class="neon-text">AI</span></h1>
+                </div>
+                <p class="login-subtitle">WELCOME TO DETECTAI SECURITY HUB</p>
+            </div>
+
+            <div class="login-tabs">
+                <button class="login-tab active" id="tab-login">LOGIN</button>
+                <button class="login-tab" id="tab-register">REGISTER</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="login-form">
+                <div class="field-group">
+                    <label>Email Address</label>
+                    <input type="email" id="loginEmail" required placeholder="name@domain.com">
+                </div>
+                <div class="field-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn-scan" id="loginBtn">SIGN IN</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" class="login-form hidden">
+                <div class="field-group">
+                    <label>Full Name</label>
+                    <input type="text" id="registerName" required placeholder="John Doe">
+                </div>
+                <div class="field-group">
+                    <label>Email Address</label>
+                    <input type="email" id="registerEmail" required placeholder="name@domain.com">
+                </div>
+                <div class="field-group">
+                    <label>Password</label>
+                    <input type="password" id="registerPassword" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn-scan" id="registerBtn">CREATE ACCOUNT</button>
+            </form>
+
+            <div id="loginMessage" class="login-message"></div>
+        </div>
+    </div>
+
+    <div class="main-container hidden">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🛡️</span>
+                    <h1>DETECT<span class="neon-text">AI</span></h1>
+                </div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item active" data-target="dashboard-panel">
+                    <a href="#"><span class="nav-icon">🛡</span> Dashboard</a>
+                </li>
+                <li class="nav-item" data-target="scanner-panel">
+                    <a href="#"><span class="nav-icon">📄</span> Job Scanner</a>
+                </li>
+                <li class="nav-item" data-target="ai-detection-panel">
+                    <a href="#"><span class="nav-icon">🤖</span> AI Detection</a>
+                </li>
+                <li class="nav-item" data-target="verification-panel">
+                    <a href="#"><span class="nav-icon">🌐</span> Verification</a>
+                </li>
+                <li class="nav-item" data-target="scam-panel">
+                    <a href="#"><span class="nav-icon">⚠</span> Scam Indicators</a>
+                </li>
+                <li class="nav-item" data-target="analytics-panel">
+                    <a href="#"><span class="nav-icon">📊</span> Analytics</a>
+                </li>
+                <li class="nav-item" data-target="profile-panel">
+                    <a href="#"><span class="nav-icon">👤</span> User Profile</a>
+                </li>
+                <li class="nav-item" data-target="settings-panel">
+                    <a href="#"><span class="nav-icon">⚙️</span> Settings</a>
+                </li>
+                <li class="nav-item" id="logoutBtnItem">
+                    <a href="#" style="color: var(--neon-red);"><span class="nav-icon">🔓</span> Logout</a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="status-item">
+                    <span class="pulse"></span>
+                    <span>SYSTEM: SECURE</span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="app-wrapper">
+            <!-- Header -->
+            <header class="compact-header">
+                <div class="breadcrumb" id="breadcrumbText">SYSTEM / DASHBOARD / OVERVIEW</div>
+                <div class="status-bar">
+                    <div class="status-item">
+                        <span class="pulse"></span>
+                        <span>AI CORE: ONLINE</span>
+                    </div>
+                    <div class="status-item"><span>V4.2.5</span></div>
+                </div>
+            </header>
+
+            <!-- 1. Dashboard (Summary) -->
+            <div id="dashboard-panel" class="app-panel active">
+                <div class="dashboard-grid">
+                    <section class="glass-panel">
+                        <div class="panel-header"><h2><span>📊</span> RISK SUMMARY</h2></div>
+                        <div class="risk-meter-box">
+                            <div class="gauge-container">
+                                <div class="gauge"></div>
+                                <div class="gauge-fill" id="gaugeFill"></div>
+                                <div class="gauge-value" id="confidenceValue">--%</div>
+                            </div>
+                            <p id="riskCategory">PENDING ANALYSIS</p>
+                        </div>
+                        <div id="predictionBadge" class="prediction-badge hidden">
+                            <span id="predictionText">ANALYZING...</span>
+                        </div>
+                    </section>
+                    
+                    <section class="glass-panel">
+                        <div class="panel-header"><h2><span>📡</span> LIVE FORENSIC LOGS</h2></div>
+                        <div id="terminalBox" class="terminal-box">
+                            <div class="terminal-header">
+                                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                                <span class="terminal-title">FORENSIC_LOGS.EXE</span>
+                            </div>
+                            <div id="terminalContent" class="terminal-content">Awaiting system input...</div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- 2. Job Scanner (Input Form) -->
+            <div id="scanner-panel" class="app-panel">
+                <section class="glass-panel">
+                    <div class="panel-header">
+                        <h2><span>🔍</span> JOB ANALYSIS CORE</h2>
+                        <div class="badges"><span class="mini-badge">OCR</span><span class="mini-badge">SCRAPE</span></div>
+                    </div>
+                    <div class="url-scanner-box">
+                        <div class="field-group">
+                            <label>Paste Job URL</label>
+                            <div class="url-input-group">
+                                <input type="url" id="jobUrl" placeholder="https://www.linkedin.com/jobs/...">
+                                <button type="button" id="scrapeBtn" class="btn-mini">AUTO-FILL</button>
+                            </div>
+                        </div>
+                    </div>
+                    <form id="jobForm" class="input-grid">
+                        <div class="field-group"><label>Job Title</label><input type="text" id="title" required></div>
+                        <div class="field-group"><label>Company</label><input type="text" id="company" required></div>
+                        <div class="field-group"><label>Salary</label><input type="text" id="salary"></div>
+                        <div class="field-group"><label>Email</label><input type="email" id="email"></div>
+                        <div class="field-group"><label>Website</label><input type="url" id="website"></div>
+                        <div class="field-group"><label>Location</label><input type="text" id="location"></div>
+                        <div class="field-group full-col"><label>Description</label><textarea id="description" rows="4" required></textarea></div>
+                        <div class="field-group full-col">
+                            <div class="upload-zone" id="dropZone">
+                                <p>Drag & Drop Screenshot for OCR</p>
+                                <input type="file" id="fileInput" hidden>
+                            </div>
+                        </div>
+                        <div class="full-col"><button type="submit" class="btn-scan" id="scanBtn">INITIALIZE AI SCAN</button></div>
+                    </form>
+                </section>
+            </div>
+
+            <!-- 3. AI Detection (Forensic Report) -->
+            <div id="ai-detection-panel" class="app-panel">
+                <section class="glass-panel" id="explanationPanel">
+                    <div class="panel-header">
+                        <h2><span>🤖</span> AI FORENSIC REPORT</h2>
+                        <button id="downloadPdf" class="btn-mini">DOWNLOAD PDF</button>
+                    </div>
+                    <div class="xai-grid">
+                        <div class="xai-content" id="xaiReport">Awaiting scan result...</div>
+                        <div class="xai-highlights">
+                            <h3><span>🚩</span> RED FLAGS</h3>
+                            <div id="highlightedDescription" class="highlight-box">Scan a job to see highlights.</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 4. Verification -->
+            <div id="verification-panel" class="app-panel">
+                <section class="glass-panel">
+                    <div class="panel-header"><h2><span>🛡️</span> TRUST VERIFICATION</h2></div>
+                    <div class="verification-stats">
+                        <div class="v-item"><span>Domain:</span> <span id="domainRep" class="v-val">PENDING</span></div>
+                        <div class="v-item"><span>SSL Status:</span> <span id="sslStatus" class="v-val">PENDING</span></div>
+                        <div class="v-item"><span>Email Auth:</span> <span id="emailOrigin" class="v-val">PENDING</span></div>
+                    </div>
+                    <div id="riskHeatmap" class="risk-heatmap">
+                        <div class="heatmap-item"><label>Linguistic</label><div class="h-bar"><div id="riskLing" class="h-fill"></div></div></div>
+                        <div class="heatmap-item"><label>Financial</label><div class="h-bar"><div id="riskFin" class="h-fill"></div></div></div>
+                        <div class="heatmap-item"><label>Identity</label><div class="h-bar"><div id="riskIden" class="h-fill"></div></div></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 5. Scam Indicators -->
+            <div id="scam-panel" class="app-panel">
+                <section class="glass-panel">
+                    <div class="panel-header">
+                        <h2><span>⚠️</span> SCAM INDICATORS</h2>
+                        <button id="reportBtn" class="btn-mini">REPORT SCAM</button>
+                    </div>
+                    <div id="indicatorsList" class="indicators-container">Awaiting forensic analysis...</div>
+                </section>
+            </div>
+
+            <!-- 7. User Profile -->
+            <div id="profile-panel" class="app-panel">
+                <section class="glass-panel profile-grid">
+                    <div class="profile-header">
+                        <div class="avatar-neon">JD</div>
+                        <div class="profile-info">
+                            <h2>Security Analyst #402</h2>
+                            <p class="neon-text">RANK: ELITE PROTECTOR</p>
+                        </div>
+                    </div>
+                    <div class="profile-stats">
+                        <div class="stat-card">
+                            <span class="stat-label">TOTAL SCANS</span>
+                            <span class="stat-value" id="totalScansCount">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">SCAMS DETECTED</span>
+                            <span class="stat-value" id="scamsDetectedCount">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">TRUST SCORE</span>
+                            <span class="stat-value">98.4%</span>
+                        </div>
+                    </div>
+
+                    <!-- Email & OTP Section (Moved to Profile) -->
+                    <div class="security-section" style="margin-top: 2.5rem; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 2.5rem;">
+                        <div class="panel-header"><h2><span>🔐</span> ACCOUNT VERIFICATION</h2></div>
+                        <div class="field-group">
+                            <label>Verify Identity (Email Address)</label>
+                            <div class="url-input-group">
+                                <input type="email" id="userEmail" placeholder="analyst@detectai.net">
+                                <button type="button" id="sendOtpBtn" class="btn-mini">SEND OTP</button>
+                            </div>
+                        </div>
+                        <div id="otpBox" class="field-group hidden" style="margin-top: 1.5rem;">
+                            <label>Authentication Code</label>
+                            <div class="url-input-group">
+                                <input type="text" id="otpInput" placeholder="______" maxlength="6" style="letter-spacing: 5px; text-align: center;">
+                                <button type="button" id="verifyOtpBtn" class="btn-mini">VERIFY</button>
+                            </div>
+                            <p id="otpStatus" style="font-size: 0.75rem; margin-top: 8px;"></p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 8. Settings -->
+            <div id="settings-panel" class="app-panel">
+                <section class="glass-panel">
+                    <div class="panel-header"><h2><span>⚙️</span> SYSTEM SETTINGS</h2></div>
+                    <div class="settings-list">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>Real-Time Monitoring</h3>
+                                <p>Enable background scanning of browser job tabs.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>High-Precision OCR</h3>
+                                <p>Use deep-learning models for screenshot analysis (Slower).</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>Notification Alerts</h3>
+                                <p>Receive desktop alerts for high-risk detected scams.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 6. Analytics -->
+            <div id="analytics-panel" class="app-panel">
+                <section class="glass-panel">
+                    <div class="panel-header">
+                        <h2><span>📈</span> ANALYTICS & HISTORY</h2>
+                        <button id="refreshStats" class="btn-mini">REFRESH</button>
+                    </div>
+                    <div class="analytics-grid">
+                        <div class="chart-box"><canvas id="scamTrendChart"></canvas></div>
+                        <div class="history-box">
+                            <h3>LATEST SCANS</h3>
+                            <div class="table-container">
+                                <table>
+                                    <thead><tr><th>Time</th><th>Job</th><th>Risk</th><th>Result</th></tr></thead>
+                                    <tbody id="historyBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+        </div> <!-- Close app-wrapper -->
+    </div> <!-- Close main-container -->
+
+    <div class="chat-widget" id="chatToggle">
+        <span>💬</span>
+        <div class="chat-bubble" id="chatBox">
+            <div class="chat-header">SECURE-BOT V2</div>
+            <div class="chat-messages" id="chatMsgs"><div class="msg bot">System online.</div></div>
+            <div class="chat-input-area"><input type="text" id="chatInput" placeholder="Ask about the scan..."></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

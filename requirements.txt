@@ -1,0 +1,13 @@
+flask
+flask-cors
+scikit-learn
+numpy
+pandas
+joblib
+requests
+beautifulsoup4
+Pillow
+pytesseract
+Flask-SQLAlchemy
+Werkzeug
+gunicorn
