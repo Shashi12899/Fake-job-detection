@@ -28,3 +28,7 @@ class JobForm(FlaskForm):
     company = StringField('Company Information', validators=[DataRequired()])
     salary = StringField('Salary Information', validators=[DataRequired()])
     submit = SubmitField('Detect Job')
+
+class OTPForm(FlaskForm):
+    otp = StringField('OTP', validators=[DataRequired(), Length(min=6, max=6)])
+    submit = SubmitField('Verify OTP')
