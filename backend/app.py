@@ -14,19 +14,32 @@ from forms import RegistrationForm, LoginForm, JobForm, OTPForm
 app = Flask(__name__)
 # Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'replace-with-a-secure-secret-key')
-# Mail settings (use environment variables)
+# Enable or disable OTP flow (set to False to bypass OTP and avoid email timeouts)
+app.config['OTP_ENABLED'] = os.getenv('OTP_ENABLED', 'true').lower() == 'true'
+# Mail settings (use environment variables). If not fully configured, suppress sending to avoid blocking.
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+# If any essential mail config is missing, disable actual sending (use console output)
+if not (app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD'] and app.config['MAIL_DEFAULT_SENDER']):
+    app.logger.warning('Mail configuration incomplete; suppressing email sending.')
+    app.config['MAIL_SUPPRESS_SEND'] = True
+# If OTP flow is disabled, suppress email sending to avoid timeouts
+elif not app.config.get('OTP_ENABLED', True):
+    app.config['MAIL_SUPPRESS_SEND'] = True
+    app.logger.info('OTP disabled – email sending suppressed')
+else:
+    app.config['MAIL_SUPPRESS_SEND'] = False
 
 mail = Mail(app)
 serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
 # Initialize extensions
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///detectai.db')
 
 db.init_app(app)
 login_manager = LoginManager(app)
@@ -78,10 +91,15 @@ def register():
         user.otp = otp_code
         user.otp_expiration = otp_exp
         db.session.commit()
-        # Send OTP email
-        otp_msg = Message('Your OTP Code', recipients=[user.email],
-                         html=f"<p>Hi {user.full_name},</p><p>Your OTP is <strong>{otp_code}</strong>. It expires in 5 minutes.</p>")
-        mail.send(otp_msg)
+        # Send OTP email with error handling
+        try:
+            otp_msg = Message('Your OTP Code', recipients=[user.email],
+                               html=f"<p>Hi {user.full_name},</p><p>Your OTP is <strong>{otp_code}</strong>. It expires in 5 minutes.</p>")
+            mail.send(otp_msg)
+        except Exception as e:
+            # Log the error and continue; user can request OTP again if needed
+            app.logger.error(f"Failed to send OTP email during registration: {e}")
+            flash('Failed to send OTP email. Please try again later.', 'warning')
         # Store pending user id in session for OTP verification
         session['pending_user_id'] = user.id
         flash('Registration successful! An OTP has been sent to your email.', 'success')
@@ -120,22 +138,42 @@ def login():
             if not user.confirmed:
                 flash('Please verify your email before logging in.', 'warning')
                 return redirect(url_for('login'))
-            # Generate OTP for login
-            otp_code = f"{random.randint(0, 999999):06d}"
-            otp_exp = datetime.datetime.utcnow() + timedelta(minutes=5)
-            user.otp = otp_code
-            user.otp_expiration = otp_exp
-            db.session.commit()
-            # Send OTP email
-            otp_msg = Message('Your Login OTP Code', recipients=[user.email],
-                             html=f"<p>Hi {user.full_name},</p><p>Your login OTP is <strong>{otp_code}</strong>. It expires in 5 minutes.</p>")
-            mail.send(otp_msg)
-            session['login_pending_user_id'] = user.id
-            flash('Login OTP sent to your email. Please verify.', 'info')
-            return redirect(url_for('login_otp'))
+
+            if app.config.get('OTP_ENABLED', True):
+                # Generate OTP for login
+                otp_code = f"{random.randint(0, 999999):06d}"
+                otp_exp = datetime.datetime.utcnow() + timedelta(minutes=5)
+                user.otp = otp_code
+                user.otp_expiration = otp_exp
+                db.session.commit()
+                # Attempt to send OTP email with error handling
+                email_sent = False
+                try:
+                    otp_msg = Message('Your Login OTP Code', recipients=[user.email],
+                                     html=f"<p>Hi {user.full_name},</p><p>Your login OTP is <strong>{otp_code}</strong>. It expires in 5 minutes.</p>")
+                    mail.send(otp_msg)
+                    email_sent = True
+                except Exception as e:
+                    app.logger.error(f"Failed to send OTP email during login: {e}")
+                    flash('Failed to send OTP email. You will be logged in without OTP.', 'warning')
+                if email_sent:
+                    session['login_pending_user_id'] = user.id
+                    flash('Login OTP sent to your email. Please verify.', 'info')
+                    return redirect(url_for('login_otp'))
+                else:
+                    # Fallback: log in directly
+                    login_user(user, remember=form.remember.data)
+                    flash('Logged in successfully (OTP email failed).', 'success')
+                    return redirect(url_for('dashboard'))
+            else:
+                # OTP disabled: log in directly
+                login_user(user, remember=form.remember.data)
+                flash('Logged in successfully (OTP disabled).', 'success')
+                return redirect(url_for('dashboard'))
         else:
             flash('Login Unsuccessful. Please check email and password.', 'danger')
     return render_template('login.html', title='Login', form=form)
+
 @app.route('/login_otp', methods=['GET', 'POST'])
 def login_otp():
     if 'login_pending_user_id' not in session:

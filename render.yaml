@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: fake-job-detection
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    autoDeploy: true
+    healthCheckPath: /
+    plan: free
+    envVars:
+      SECRET_KEY: replace-with-a-secure-secret-key
+      OTP_ENABLED: "true"
+      MAIL_SERVER: smtp.gmail.com
+      MAIL_PORT: "587"
+      MAIL_USE_TLS: "true"
+      MAIL_USERNAME: your_email@example.com
+      MAIL_PASSWORD: your_email_password
+      MAIL_DEFAULT_SENDER: your_email@example.com

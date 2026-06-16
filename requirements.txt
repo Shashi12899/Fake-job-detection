@@ -11,3 +11,6 @@ pytesseract
 Flask-SQLAlchemy
 Werkzeug
 gunicorn
+flask-login
+Flask-Mail
+Flask-WTF
