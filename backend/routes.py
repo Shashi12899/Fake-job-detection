@@ -1,5 +1,7 @@
-from flask import Blueprint, request, jsonify, session, send_from_directory
+from flask import Blueprint, request, jsonify, session, send_from_directory, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature
+from functools import wraps
 import datetime
 import json
 import hashlib
@@ -17,6 +19,43 @@ from backend.utils import (is_safe_url, verify_company_details, verify_email,
 
 api = Blueprint('api', __name__)
 
+def get_serializer():
+    # Use the app's secret key to sign tokens
+    return URLSafeTimedSerializer(current_app.config.get('SECRET_KEY', 'default_secret'))
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        # Check Authorization header
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ')[1]
+        
+        if not token:
+            return jsonify({'error': 'Token is missing or invalid!'}), 401
+            
+        try:
+            s = get_serializer()
+            # Token expires in 24 hours (86400 seconds)
+            email = s.loads(token, max_age=86400)
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                raise Exception("User not found")
+            # Store user in flask request context for the route to use
+            request.user = user
+        except SignatureExpired:
+            return jsonify({'error': 'Token has expired!'}), 401
+        except BadTimeSignature:
+            return jsonify({'error': 'Invalid token!'}), 401
+        except Exception as e:
+            return jsonify({'error': 'Authentication failed!'}), 401
+            
+        return f(*args, **kwargs)
+    return decorated
+
+
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 model_path = os.path.join(base_dir, 'ml', 'model.joblib')
 vectorizer_path = os.path.join(base_dir, 'ml', 'vectorizer.joblib')
@@ -30,7 +69,7 @@ except Exception:
 
 @api.route('/auth/register', methods=['POST'])
 def register():
-    data = request.json
+    data = request.json or {}
     name = data.get('name', 'Operator')
     email = data.get('email', '').strip().lower()
     password = data.get('password', '')
@@ -53,8 +92,10 @@ def register():
     db.session.commit()
     
     session['user'] = email
+    token = get_serializer().dumps(email)
     return jsonify({
         "status": "Registration Complete",
+        "token": token,
         "user": {
             "name": name,
             "email": email,
@@ -64,7 +105,7 @@ def register():
 
 @api.route('/auth/login', methods=['POST'])
 def login():
-    data = request.json
+    data = request.json or {}
     email = data.get('email', '').strip().lower()
     password = data.get('password', '')
     
@@ -93,8 +134,10 @@ def login():
     return jsonify({"error": "Access Denied: Invalid security signature"}), 401
 
 def _login_success(user):
+    token = get_serializer().dumps(user.email)
     return jsonify({
         "status": "Access Granted",
+        "token": token,
         "user": {
             "name": user.name,
             "email": user.email,
@@ -110,8 +153,10 @@ def biometric_login():
     user = User.query.filter_by(email=email).first()
     if user:
         session['user'] = user.email
+        token = get_serializer().dumps(user.email)
         return jsonify({
             "status": "Biometric Signature Match",
+            "token": token,
             "user": {"name": user.name, "email": user.email, "rank": user.rank}
         })
         
@@ -129,25 +174,20 @@ def biometric_login():
         db.session.commit()
         
     session['user'] = guest.email
+    token = get_serializer().dumps(guest.email)
     return jsonify({
         "status": "Biometric Signature Match",
+        "token": token,
         "user": {"name": guest.name, "email": guest.email, "rank": guest.rank}
     })
 
 @api.route('/auth/session', methods=['GET'])
+@token_required
 def get_session():
-    email = session.get('user')
-    if not email:
-        return jsonify({"authenticated": False})
-        
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        session.pop('user', None)
-        return jsonify({"authenticated": False})
-        
+    user = request.user
     return jsonify({
         "authenticated": True,
-        "user": {"name": user.name, "email": email, "rank": user.rank}
+        "user": {"name": user.name, "email": user.email, "rank": user.rank}
     })
 
 @api.route('/auth/logout', methods=['POST'])
@@ -156,10 +196,9 @@ def logout():
     return jsonify({"status": "Session terminated"})
 
 @api.route('/history', methods=['GET'])
+@token_required
 def get_history():
-    operator = session.get('user')
-    if not operator:
-        return jsonify([])
+    operator = request.user.email
     histories = ScanHistory.query.filter_by(operator=operator).order_by(ScanHistory.id.desc()).limit(50).all()
     res = []
     for h in histories:
@@ -174,8 +213,9 @@ def get_history():
     return jsonify(res)
 
 @api.route('/report', methods=['POST'])
+@token_required
 def report_scam():
-    data = request.json
+    data = request.json or {}
     company = data.get('company')
     if company:
         report = CommunityReport(
@@ -188,11 +228,9 @@ def report_scam():
     return jsonify({"status": "Reported Successfully"})
 
 @api.route('/stats', methods=['GET'])
+@token_required
 def get_stats():
-    operator = session.get('user')
-    if not operator:
-        return jsonify({"total": 0, "fake_count": 0, "real_count": 0, "fake_percent": 0, "top_reasons": []})
-        
+    operator = request.user.email
     histories = ScanHistory.query.filter_by(operator=operator).all()
     total = len(histories)
     fakes = len([h for h in histories if h.result == 'FAKE JOB'])
@@ -210,7 +248,8 @@ def get_stats():
 
 @api.route('/scrape', methods=['POST'])
 def scrape():
-    url = request.json.get('url')
+    data = request.json or {}
+    url = data.get('url')
     if not url: 
         return jsonify({"error": "No URL provided"}), 400
         
@@ -241,7 +280,7 @@ def ocr():
 
 @api.route('/predict', methods=['POST'])
 def predict():
-    data = request.json
+    data = request.json or {}
     title, company, description, website, email = data.get('title',''), data.get('company',''), data.get('description',''), data.get('website',''), data.get('email','')
     combined_text = f"{title} {company} {description} {website} {email}".lower()
     
@@ -290,7 +329,15 @@ def predict():
     }
     
     # Save scan result
-    operator = session.get('user', 'anonymous')
+    if 'Authorization' in request.headers and request.headers['Authorization'].startswith('Bearer '):
+        try:
+            token = request.headers['Authorization'].split(' ')[1]
+            operator = get_serializer().loads(token, max_age=86400)
+        except:
+            operator = 'anonymous'
+    else:
+        operator = session.get('user', 'anonymous')
+        
     history = ScanHistory(
         timestamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         operator=operator,

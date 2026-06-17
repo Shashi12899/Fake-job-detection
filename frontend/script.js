@@ -1,4 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- 0. API CONFIGURATION ---
+    const API_BASE = window.location.protocol === 'file:' || window.location.port === '5500' || window.location.port === '3000' ? 'http://127.0.0.1:5000' : '';
+    
+    // Configure Axios
+    if (typeof axios !== 'undefined') {
+        axios.defaults.baseURL = API_BASE;
+        axios.interceptors.request.use(config => {
+            const token = localStorage.getItem('detectai_token');
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+        });
+    }
+
     const form = document.getElementById('jobForm');
     const scanBtn = document.getElementById('scanBtn');
     const gaugeFill = document.getElementById('gaugeFill');
@@ -81,8 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check Session on page load
     async function checkSession() {
         try {
-            const res = await fetch('/api/auth/session');
-            const data = await res.json();
+            const res = await axios.get('/api/auth/session');
+            const data = res.data;
             if (data.authenticated) {
                 enterApp(data.user);
             } else {
@@ -124,25 +139,23 @@ document.addEventListener('DOMContentLoaded', () => {
         loginMessage.textContent = 'VERIFYING CREDENTIALS...';
         
         try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ email, password: secretKey })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                loginMessage.className = 'login-message success';
-                loginMessage.textContent = 'LOGIN SUCCESSFUL. REDIRECTING...';
-                setTimeout(() => {
-                    enterApp(data.user);
-                }, 1000);
-            } else {
-                loginMessage.className = 'login-message error';
-                loginMessage.textContent = data.error || 'INVALID EMAIL OR PASSWORD';
+            const res = await axios.post('/api/auth/login', { email, password: secretKey });
+            const data = res.data;
+            if (data.token) {
+                localStorage.setItem('detectai_token', data.token);
             }
+            loginMessage.className = 'login-message success';
+            loginMessage.textContent = 'LOGIN SUCCESSFUL. REDIRECTING...';
+            setTimeout(() => {
+                enterApp(data.user);
+            }, 1000);
         } catch(err) {
             loginMessage.className = 'login-message error';
-            loginMessage.textContent = 'SERVER CONNECTION TIMEOUT';
+            if (err.response && err.response.data && err.response.data.error) {
+                loginMessage.textContent = err.response.data.error;
+            } else {
+                loginMessage.textContent = 'SERVER CONNECTION TIMEOUT';
+            }
         }
     });
 
@@ -157,25 +170,23 @@ document.addEventListener('DOMContentLoaded', () => {
         loginMessage.textContent = 'CREATING YOUR ACCOUNT...';
         
         try {
-            const res = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, email, password: secretKey })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                loginMessage.className = 'login-message success';
-                loginMessage.textContent = 'REGISTRATION SUCCESSFUL. REDIRECTING...';
-                setTimeout(() => {
-                    enterApp(data.user);
-                }, 1000);
-            } else {
-                loginMessage.className = 'login-message error';
-                loginMessage.textContent = data.error || 'REGISTRATION FAILED';
+            const res = await axios.post('/api/auth/register', { name, email, password: secretKey });
+            const data = res.data;
+            if (data.token) {
+                localStorage.setItem('detectai_token', data.token);
             }
+            loginMessage.className = 'login-message success';
+            loginMessage.textContent = 'REGISTRATION SUCCESSFUL. REDIRECTING...';
+            setTimeout(() => {
+                enterApp(data.user);
+            }, 1000);
         } catch(err) {
             loginMessage.className = 'login-message error';
-            loginMessage.textContent = 'DATABASE CONNECTION TIMEOUT';
+            if (err.response && err.response.data && err.response.data.error) {
+                loginMessage.textContent = err.response.data.error;
+            } else {
+                loginMessage.textContent = 'DATABASE CONNECTION TIMEOUT';
+            }
         }
     });
 
@@ -192,33 +203,22 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(async () => {
                 const email = document.getElementById('loginEmail').value;
                 try {
-                    const res = await fetch('/api/auth/biometric', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ email })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        biometricStatus.textContent = 'VERIFIED! ACCESS AUTHORIZED.';
-                        biometricStatus.style.color = 'var(--neon-green)';
-                        loginMessage.className = 'login-message success';
-                        loginMessage.textContent = `WELCOME BACK, ${data.user.name.toUpperCase()}`;
-                        setTimeout(() => {
-                            enterApp(data.user);
-                            biometricBtn.classList.remove('hidden');
-                            biometricScanner.classList.add('hidden');
-                            biometricStatus.style.color = '';
-                            loginMessage.textContent = '';
-                        }, 1200);
-                    } else {
-                        biometricStatus.textContent = 'SCAN FAILURE: ACCESS DECOMMISSIONED';
-                        biometricStatus.style.color = 'var(--neon-red)';
-                        setTimeout(() => {
-                            biometricBtn.classList.remove('hidden');
-                            biometricScanner.classList.add('hidden');
-                            biometricStatus.style.color = '';
-                        }, 2000);
+                    const res = await axios.post('/api/auth/biometric', { email });
+                    const data = res.data;
+                    if (data.token) {
+                        localStorage.setItem('detectai_token', data.token);
                     }
+                    biometricStatus.textContent = 'VERIFIED! ACCESS AUTHORIZED.';
+                    biometricStatus.style.color = 'var(--neon-green)';
+                    loginMessage.className = 'login-message success';
+                    loginMessage.textContent = `WELCOME BACK, ${data.user.name.toUpperCase()}`;
+                    setTimeout(() => {
+                        enterApp(data.user);
+                        biometricBtn.classList.remove('hidden');
+                        biometricScanner.classList.add('hidden');
+                        biometricStatus.style.color = '';
+                        loginMessage.textContent = '';
+                    }, 1200);
                 } catch(e) {
                     biometricStatus.textContent = 'BIOMETRIC SERVER OFFLINE';
                     biometricStatus.style.color = 'var(--neon-red)';
@@ -237,11 +237,10 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         if (confirm("Disconnect secure operator link?")) {
             try {
-                await fetch('/api/auth/logout', { method: 'POST' });
-                location.reload();
-            } catch(err) {
-                location.reload();
-            }
+                await axios.post('/api/auth/logout');
+            } catch(err) {}
+            localStorage.removeItem('detectai_token');
+            location.reload();
         }
     });
 
@@ -283,8 +282,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('scrapeBtn');
         btn.textContent = "SCRAPING...";
         try {
-            const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url})});
-            const data = await res.json();
+            const res = await axios.post('/api/scrape', {url});
+            const data = res.data;
             document.getElementById('title').value = data.title;
             document.getElementById('company').value = data.company;
             document.getElementById('description').value = data.description;
@@ -302,8 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dropZone.innerHTML = "<p>Analyzing OCR...</p>";
         const fd = new FormData(); fd.append('file', file);
         try {
-            const res = await fetch('/api/ocr', { method: 'POST', body: fd });
-            const data = await res.json();
+            const res = await axios.post('/api/ocr', fd);
+            const data = res.data;
             document.getElementById('description').value = data.text;
             dropZone.innerHTML = "<p>OCR Success</p>";
         } catch(e) { dropZone.innerHTML = "<p>OCR Error</p>"; }
@@ -329,8 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            const res = await fetch('/api/predict', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-            const result = await res.json();
+            const res = await axios.post('/api/predict', payload);
+            const result = res.data;
             lastScanResult = result;
             
             setTimeout(() => {
@@ -407,8 +406,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 5. ANALYTICS & HISTORY ---
     async function initStats() {
         try {
-            const res = await fetch('/api/stats');
-            const data = await res.json();
+            const res = await axios.get('/api/stats');
+            const data = res.data;
             
             // Update Profile Stats
             if (document.getElementById('totalScansCount')) {
@@ -435,8 +434,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadHistory() {
         try {
-            const res = await fetch('/api/history');
-            const history = await res.json();
+            const res = await axios.get('/api/history');
+            const history = res.data;
             const body = document.getElementById('historyBody');
             body.innerHTML = history.reverse().map(h => `
                 <tr>

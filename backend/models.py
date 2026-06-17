@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
+import json
 
 # db is initialized in app.py and imported here
 
@@ -8,27 +9,40 @@ db = SQLAlchemy()
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(150), nullable=False)
+    name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
-    otp = db.Column(db.String(6), nullable=True)
-    otp_expiration = db.Column(db.DateTime, nullable=True)
-    confirmed = db.Column(db.Boolean, nullable=False, default=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    rank = db.Column(db.String(50), default="SECURITY ANALYST")
+    created_at = db.Column(db.String(50), nullable=True)
 
     def __repr__(self):
         return f"<User {self.email}>"
 
-class Job(db.Model):
-    __tablename__ = 'jobs'
+class ScanHistory(db.Model):
+    __tablename__ = 'scan_history'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    company = db.Column(db.String(150), nullable=True)
-    salary = db.Column(db.String(50), nullable=True)
-    prediction = db.Column(db.String(10), nullable=True)  # REAL or FAKE
-    timestamp = db.Column(db.DateTime, server_default=db.func.now())
+    timestamp = db.Column(db.String(50), nullable=False)
+    operator = db.Column(db.String(120), nullable=False)
+    input_data = db.Column(db.Text, nullable=False)
+    result = db.Column(db.String(50), nullable=False)
+    risk_score = db.Column(db.Float, nullable=False)
+    reasons = db.Column(db.Text, nullable=False)
 
-    user = db.relationship('User', backref=db.backref('jobs', lazy=True))
+    def get_input_data(self):
+        try:
+            return json.loads(self.input_data)
+        except:
+            return {}
 
-    def __repr__(self):
-        return f"<Job {self.id} by {self.user_id}>"
+    def get_reasons(self):
+        try:
+            return json.loads(self.reasons)
+        except:
+            return []
+
+class CommunityReport(db.Model):
+    __tablename__ = 'community_reports'
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.String(50), nullable=False)
+    company = db.Column(db.String(150), nullable=False)
+    reason = db.Column(db.Text, nullable=False)
